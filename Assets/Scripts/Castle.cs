@@ -2,101 +2,157 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Castle : MonoBehaviour
+public class Castle : ACastlePart
 {
     public CastleStage stagePrefab;
 
     public int amountDamagePerHit = 5;
 
-    public int lifePoint = 100;
-    private int nb_stages;
+    public float lifePoint = 100;
+    private int NbStages;
 
     private Stack<CastleStage> stages = new Stack<CastleStage>();
 
-    // Use this for initialization
-    void Start()
+    override public void Start()
     {
+        //gameObject.transform.position = _spawnLocation.gameObject.transform.position + Vector3.up * (gameObject.transform.localScale.y / 2);
+        //Parent = _spawnLocation.transform;
+
+        //ReductionPerShot = 0;
+        //AttachedObject = null;
+
+        //gameObject.transform.position += Vector3.up * stagePrefab.transform.localScale.y * CalculateStage();
         //for (int i = 0; i < CalculateStage(); i++)
         //{
-        //    var collider = (nb_stages <= 0) ? gameObject.GetComponent<BoxCollider>() : stages.Peek().GetCollider();
-        //    var last_collider = collider != null ? collider.bounds : new Bounds();
-        //    var last_position = (nb_stages <= 0) ? gameObject.transform.position : stages.Peek().GetPosition();
+        //    var instance = Instantiate(stagePrefab) as CastleStage;
 
-        //    var _gameObject = (nb_stages <= 0) ? gameObject : stages.Peek().GetGameObject();
+        //    var target = (stages.Count <= 0) ? this : stages.Peek() as ACastlePart;
+        //    var targetCollider = target.GetComponent<BoxCollider>();
 
-        //    var height = last_collider.extents.y * _gameObject.transform.localScale.y;
+        //    var posX = target.gameObject.transform.position.x;
+        //    var posY = target.gameObject.transform.position.y;
+        //    var posZ = target.gameObject.transform.position.z;
+            
+        //    var height = targetCollider.size.y * target.gameObject.transform.localScale.y;
+        //    var centersDifference = targetCollider.center.y + posY;
 
-        //    Debug.Log(height);
+        //    var nextPositon = new Vector3(posX, (centersDifference - height / 2), posZ);
+        //    instance.Init(this, target, nextPositon);
+        //    stages.Push(instance);
 
-        //    stages.Push(ScriptableObject.CreateInstance("CastleStage") as CastleStage);
-        //    stages.Peek().init(this, stagePrefab, new Vector3(0, last_position.y + height - 50, 0));
-        //    nb_stages++;
         //}
 
-        var last_collider = gameObject.GetComponent<BoxCollider>();
-        var height = last_collider.size.y * gameObject.transform.localScale.y;
-        var height2 = stagePrefab.GetComponent<BoxCollider>().size.y * stagePrefab.gameObject.transform.localScale.y;
-        
-        var posY = gameObject.transform.position.y;
-
-        var instance = Instantiate(stagePrefab) as CastleStage;
-        instance.Init(this, instance.gameObject, Vector3.up * (posY - height / 2));
-
-        Debug.Log("allo " + gameObject.GetComponent<BoxCollider>());
-
-        //Debug.Log("Castle " + this.name + " at " + nb_stages + " lifes.");
+        //Debug.Log("Castle " + this.name + " at " + NbStages + " lifes.");
     }
 
-    // Update is called once per frame
-    void Update()
+    override public void Update()
     {
-        if (Input.GetMouseButtonDown(0))
-        {
-            ReceiveDamage(amountDamagePerHit);
-        }
 
-        if (Input.GetMouseButtonDown(1))
+    }
+
+    public override void Init(GameObject parent, ACastlePart attachedObject, Castle attachedCastle = null, Vector3 position = default(Vector3))
+    {
+        gameObject.transform.SetParent(parent.transform);
+        gameObject.transform.position = position + Vector3.up * (gameObject.transform.localScale.y / 2);
+
+        ReductionPerShot = 0;
+        AttachedObject = null;
+
+        gameObject.transform.position += Vector3.up * stagePrefab.transform.localScale.y * CalculateStage();
+        for (int i = 0; i < CalculateStage(); i++)
         {
-            this.gameObject.transform.Translate(new Vector3(0, 1, 0));
-            Debug.Log(gameObject.GetComponent<MeshFilter>().mesh.bounds);
+            var instance = Instantiate(stagePrefab) as CastleStage;
+
+            var target = (stages.Count <= 0) ? this : stages.Peek() as ACastlePart;
+            var targetCollider = target.GetComponent<BoxCollider>();
+
+            var posX = target.gameObject.transform.position.x;
+            var posY = target.gameObject.transform.position.y;
+            var posZ = target.gameObject.transform.position.z;
+
+            var height = targetCollider.size.y * target.gameObject.transform.localScale.y;
+            var centersDifference = targetCollider.center.y + posY;
+
+            var nextPositon = new Vector3(posX, (centersDifference - height / 2), posZ);
+            instance.Init(parent, target, this, nextPositon);
+            stages.Push(instance);
+
         }
+    }
+
+    private void OnMouseDown()
+    {
+        ReceiveDamage();
         UpdateLifePoints();
     }
 
-    public void ReceiveDamage(int _amount)
+    private bool CheckForDamage()
     {
-        TakeDamage(_amount);
+        return true;
     }
 
-    void TakeDamage(int _amount)
+    private void CreatePlane(Vector3 position, Color color)
     {
-        Debug.Log(this.name + "just took " + _amount + " damage!");
+        var plane = GameObject.CreatePrimitive(PrimitiveType.Plane);
+        plane.transform.position = position;
+        plane.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+        plane.GetComponent<Renderer>().material.color = color;
 
-        //CastleStage concerned_stage = stages.Peek();
+    }
 
-        //concerned_stage.ReceiveDamage(_amount);
+    public void ReceiveDamage()
+    {
+        TakeDamage(amountDamagePerHit);
+    }
+
+    void TakeDamage(int amountDamage)
+    {
+        amountDamage = amountDamage > 0 ? amountDamage * -1 : amountDamage;
+        Debug.Log(this.name + " just took " + amountDamage + " damage!");
+
+        CastleStage concernedStage = stages.Peek();
+
+        concernedStage.ReceiveDamage(amountDamage);
+        RepositionStages(amountDamage, concernedStage);
     }
 
     public void DestroyStage(int remaining_damages, CastleStage _stage)
     {
         Debug.Log("One stage has to be destroyed.");
 
+        stages.Pop();
+        Destroy(_stage.gameObject);
         TakeDamage(remaining_damages);
     }
 
     void UpdateLifePoints()
     {
-        int life = 0;
+        float life = 0;
         foreach (var stage in stages)
         {
-            life += stage.GetLifePoints();
+            life += stage.GetRemainingLife();
         }
 
         lifePoint = life;
     }
 
-    int CalculateStage()
+    float CalculateStage()
     {
-        return (lifePoint / CastleStage.life_stage);
+        return lifePoint / CastleStage.canHandle;
+    }
+
+    public void RepositionStages(int amountDamage, ACastlePart source)
+    {
+        var movement = Vector3.up * (amountDamage * source.ReductionPerShot);
+
+        foreach (CastleStage stage in stages)
+        {
+            if (stage == source)
+                stage.gameObject.transform.position += Vector3.up * (amountDamage * source.ReductionPerShot / 2);
+            else
+                stage.gameObject.transform.position += Vector3.up * (amountDamage * source.ReductionPerShot);
+        }
+
+        gameObject.transform.position += movement;
     }
 }

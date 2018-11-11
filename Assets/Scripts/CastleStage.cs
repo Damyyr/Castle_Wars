@@ -2,69 +2,83 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class CastleStage : MonoBehaviour
+public class CastleStage : ACastlePart
 {
 
-    public const int life_stage = 10;
+    public const int canHandle = 10;
+    private float remainingLife = canHandle;
 
-    public GameObject prefab;
+    private Castle _attachedCastle;
 
-    private Castle attached_castle;
-    private GameObject attachedObject;
 
-    public int life_point = life_stage;
-
-    public void Init(Castle attached_castle, GameObject attachedObject, Vector3 position = new Vector3())
+    override public void Start()
     {
-        this.attached_castle = attached_castle;
-        this.attachedObject = attachedObject;
-        
-        gameObject.transform.position = (position - Vector3.up * GetHeight() / 2);
-
-        Debug.Log("A stage has been created with " + attached_castle.name);
+        ReductionPerShot = gameObject.transform.localScale.y / canHandle;
     }
 
-    public void ReceiveDamage(int _amount)
+    public override void Update()
     {
-        TakeDamage(_amount);
+        //throw new System.NotImplementedException();
     }
 
-    public int GetLifePoints()
+    //public void Init(Castle attachedCastle, ACastlePart attachedObject, Vector3 position = new Vector3())
+    //{
+    //    gameObject.transform.SetParent(_attachedCastle.Parent, false);
+    //    _attachedCastle = attachedCastle;
+    //    AttachedObject = attachedObject;
+
+    //    gameObject.transform.position = (position - Vector3.up * Height / 2);
+
+    //    Debug.Log("A stage has been created with " + _attachedCastle.name);
+    //}
+
+    public override void Init(GameObject parent, ACastlePart attachedObject, Castle attachedCastle = null, Vector3 position = default(Vector3))
     {
-        return life_point;
+        gameObject.transform.SetParent(parent.transform, false);
+        _attachedCastle = attachedCastle;
+        AttachedObject = attachedObject;
+
+        gameObject.transform.position = (position - Vector3.up * Height / 2);
+
+        Debug.Log("A stage has been created with " + attachedCastle.name);
     }
 
-    public Collider GetCollider()
+    public void ReceiveDamage(int amount)
     {
-        return this.gameObject.GetComponent<BoxCollider>();
+        TakeDamage(amount);
     }
 
-    public GameObject GetGameObject()
+    public float GetRemainingLife()
     {
-        return this.gameObject;
+        return remainingLife;
     }
 
-    public Vector3 GetPosition()
+    void TakeDamage(int amountDamage)
     {
-        return this.gameObject.transform.position;
-    }
-
-    public float GetHeight()
-    {
-        var collider = gameObject.GetComponent<BoxCollider>();
-        return collider.size.y* gameObject.transform.localScale.y;
-    }
-
-    void TakeDamage(int _amount)
-    {
-        life_point -= _amount;
-        if (life_point <= 0)
+        remainingLife += amountDamage;
+        if (remainingLife <= 0)
         {
-            Destroy(this.gameObject);
-            int remaining_damage = life_point * -1;
-            attached_castle.DestroyStage(remaining_damage, this);
+            int remainingDamage = (int)remainingLife * -1;
+            _attachedCastle.DestroyStage(remainingDamage, this);
         }
-
+        else
+        {
+            gameObject.transform.localScale += Vector3.up * (amountDamage * ReductionPerShot);
+        }
         //Dimiuer le height et baisser la position de attachedObject
+    }
+
+    //public void RepositionStages(int nbStage)
+    //{
+    //    if (AttachedObject != null)
+    //    {
+    //        AttachedObject.RepositionStages(nbStage + 1);
+    //    }
+    //    gameObject.transform.position -= Vector3.up * ReductionPerShot * nbStage;
+    //}
+
+    private void OnMouseDown()
+    {
+        _attachedCastle.ReceiveDamage();
     }
 }
